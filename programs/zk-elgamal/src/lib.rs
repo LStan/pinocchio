@@ -60,8 +60,10 @@ macro_rules! build_instruction {
             /// Proof in instruction data, no context state.
             ///
             #[doc = $doc_aux]
+            ///
+            /// No accounts are required by this instruction.
             pub struct [<$name Data>]<'a> {
-                /// Proof data
+                /// Proof data.
                 pub proof_data: &'a [u8; $proof_len],
             }
 
@@ -89,15 +91,16 @@ macro_rules! build_instruction {
             ///
             #[doc = $doc_aux]
             ///
-            /// ### Accounts:
+            /// Accounts expected by this instruction:
+            ///
             ///   0. `[writable]` The proof context account to create.
             ///   1. `[]` The proof context account owner.
             pub struct [<$name DataWithContext>]<'a, 'b> {
-                /// Context state account
+                /// Context state account.
                 pub context_state_account: &'a AccountView,
-                /// Context state authority account
+                /// Context state authority account.
                 pub context_state_authority: &'a AccountView,
-                /// Proof data
+                /// Proof data.
                 pub proof_data: &'b [u8; $proof_len],
             }
 
@@ -134,12 +137,13 @@ macro_rules! build_instruction {
             ///
             #[doc = $doc_aux]
             ///
-            /// ### Accounts:
+            /// Accounts expected by this instruction:
+            ///
             ///   0. `[]` Account to read the proof from.
             pub struct [<$name Account>]<'a> {
-                /// Account with proof
+                /// Account with the proof.
                 pub proof_account: &'a AccountView,
-                /// Offset of proof in the proof account
+                /// Offset of the proof in the proof account.
                 pub offset: u32,
             }
 
@@ -171,18 +175,19 @@ macro_rules! build_instruction {
             ///
             #[doc = $doc_aux]
             ///
-            /// ### Accounts:
+            /// Accounts expected by this instruction:
+            ///
             ///   0. `[]` Account to read the proof from.
-            ///   1. `[WRITE]` The proof context account to create.
+            ///   1. `[writable]` The proof context account to create.
             ///   2. `[]` The proof context account to create.
             pub struct [<$name AccountWithContext>]<'a, 'b> {
-                /// Account with proof
+                /// Account with the proof
                 pub proof_account: &'a AccountView,
-                /// Context state account
+                /// Context state account.
                 pub context_state_account: &'b AccountView,
-                /// Context state authority account
+                /// Context state authority account.
                 pub context_state_authority: &'b AccountView,
-                /// Offset of proof in the proof account
+                /// Offset of the proof in the proof account.
                 pub offset: u32,
             }
 
