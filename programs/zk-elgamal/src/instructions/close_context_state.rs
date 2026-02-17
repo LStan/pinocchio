@@ -4,9 +4,6 @@ use solana_program_error::ProgramResult;
 
 /// Close a zero-knowledge proof context state.
 ///
-/// A public key validity proof certifies that an ElGamal public key is well-formed and the
-/// prover knows the corresponding secret key.
-///
 /// Accounts expected by this instruction:
 ///
 ///   0. `[writable]` The proof context account to close
