@@ -107,7 +107,6 @@ macro_rules! build_instruction {
             impl [<$name DataWithContext>]<'_,'_> {
                 #[inline(always)]
                 pub fn invoke(&self) -> ProgramResult {
-                    // Instruction accounts
                     let instruction_accounts: [InstructionAccount; 2] = [
                         InstructionAccount::writable(self.context_state_account.address()),
                         InstructionAccount::readonly(self.context_state_authority.address()),
@@ -150,7 +149,6 @@ macro_rules! build_instruction {
             impl [<$name Account>]<'_> {
                 #[inline(always)]
                 pub fn invoke(&self) -> ProgramResult {
-                    // Instruction accounts
                     let instruction_accounts: [InstructionAccount; 1] =
                         [InstructionAccount::readonly(self.proof_account.address())];
 
@@ -194,7 +192,6 @@ macro_rules! build_instruction {
             impl [<$name AccountWithContext>]<'_,'_> {
                 #[inline(always)]
                 pub fn invoke(&self) -> ProgramResult {
-                    // Instruction accounts
                     let instruction_accounts: [InstructionAccount; 3] = [
                         InstructionAccount::readonly(self.proof_account.address()),
                         InstructionAccount::writable(self.context_state_account.address()),
