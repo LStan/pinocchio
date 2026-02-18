@@ -1,5 +1,8 @@
 use solana_account_view::AccountView;
-use solana_instruction_view::{cpi::invoke, InstructionAccount, InstructionView};
+use solana_instruction_view::{
+    cpi::{invoke_signed, Signer},
+    InstructionAccount, InstructionView,
+};
 use solana_program_error::ProgramResult;
 
 /// Close a zero-knowledge proof context state.
@@ -21,6 +24,10 @@ pub struct CloseContextState<'a, 'b> {
 impl CloseContextState<'_, '_> {
     #[inline(always)]
     pub fn invoke(&self) -> ProgramResult {
+        self.invoke_signed(&[])
+    }
+    #[inline(always)]
+    pub fn invoke_signed(&self, signers: &[Signer]) -> ProgramResult {
         let instruction_accounts: [InstructionAccount; 3] = [
             InstructionAccount::writable(self.context_state_account.address()),
             InstructionAccount::writable(self.destination_account.address()),
@@ -33,13 +40,14 @@ impl CloseContextState<'_, '_> {
             data: &[0],
         };
 
-        invoke(
+        invoke_signed(
             &instruction,
             &[
                 self.context_state_account,
                 self.destination_account,
                 self.context_state_authority,
             ],
+            signers,
         )
     }
 }
