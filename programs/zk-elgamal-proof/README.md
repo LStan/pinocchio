@@ -32,6 +32,7 @@ This will add the `pinocchio-zk-elgamal-proof` dependency to your `Cargo.toml` f
 ## Examples
 
 Verify a public key validity with a context state and a proof data array:
+
 ```rust
 // This example assumes that instruction receives writable `context_state_account` account
 // and `context_state_authority` account.
