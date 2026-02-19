@@ -2,10 +2,12 @@
 
 pub mod instructions;
 
-use core::mem::MaybeUninit;
-use solana_account_view::AccountView;
-use solana_instruction_view::{cpi::invoke, InstructionAccount, InstructionView};
-use solana_program_error::ProgramResult;
+use {
+    core::mem::MaybeUninit,
+    solana_account_view::AccountView,
+    solana_instruction_view::{cpi::invoke, InstructionAccount, InstructionView},
+    solana_program_error::ProgramResult,
+};
 
 solana_address::declare_id!("ZkE1Gama1Proof11111111111111111111111111111");
 
@@ -33,16 +35,20 @@ pub const RANGE_PROOF_U128_FULL_LEN: usize = 264 + 736; // 264 for context + 736
 /// Byte length of a range proof for an unsigned 256-bit number with context
 pub const RANGE_PROOF_U256_FULL_LEN: usize = 264 + 800; // 264 for context + 800 for proof
 
-/// Byte length of a grouped ciphertext for 2 handles validity proof with context
+/// Byte length of a grouped ciphertext for 2 handles validity proof with
+/// context
 pub const GROUPED_CIPHERTEXT_2_HANDLES_VALIDITY_PROOF_FULL_LEN: usize = 160 + 160; // 160 for context + 160 for proof
 
-/// Byte length of a grouped ciphertext for 3 handles validity proof with context
+/// Byte length of a grouped ciphertext for 3 handles validity proof with
+/// context
 pub const GROUPED_CIPHERTEXT_3_HANDLES_VALIDITY_PROOF_FULL_LEN: usize = 224 + 192; // 224 for context + 192 for proof
 
-/// Byte length of a batched grouped ciphertext for 2 handles validity proof with context
+/// Byte length of a batched grouped ciphertext for 2 handles validity proof
+/// with context
 pub const BATCHED_GROUPED_CIPHERTEXT_2_HANDLES_VALIDITY_PROOF_FULL_LEN: usize = 256 + 160; // 256 for context + 160 for proof
 
-/// Byte length of a batched grouped ciphertext for 3 handles validity proof with context
+/// Byte length of a batched grouped ciphertext for 3 handles validity proof
+/// with context
 pub const BATCHED_GROUPED_CIPHERTEXT_3_HANDLES_VALIDITY_PROOF_FULL_LEN: usize = 352 + 192; // 352 for context + 192 for proof
 
 const UNINIT_BYTE: MaybeUninit<u8> = MaybeUninit::<u8>::uninit();
@@ -63,8 +69,8 @@ fn write_bytes(destination: &mut [MaybeUninit<u8>], source: &[u8]) {
 ///
 /// It can contain two types of proofs:
 ///
-/// 1. A reference to an account that contains a proof.
-///    The `offset` field specifies where in the account the proof is located.
+/// 1. A reference to an account that contains a proof. The `offset` field
+///    specifies where in the account the proof is located.
 /// 2. A proof stored in a byte array of size `PROOF_LEN`.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Proof<'a, const PROOF_LEN: usize> {
@@ -77,7 +83,8 @@ pub enum Proof<'a, const PROOF_LEN: usize> {
 
 /// A struct that holds references to the context state account and authority.
 ///
-/// It is used to provide information about the context state when invoking an instruction.
+/// It is used to provide information about the context state when invoking an
+/// instruction.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ContextStateInfo<'a> {
     pub context_state_account: &'a AccountView,
@@ -99,8 +106,8 @@ macro_rules! create_instruction_struct {
         /// Accounts expected by this instruction:
         ///
         ///   There are four ways to structure the accounts, depending on whether the
-        ///   proof is provided as instruction data or in a separate account, and whether
-        ///   a proof context is created.
+        ///   proof is provided as instruction data or in a separate account, and
+        ///   whether a proof context is created.
         ///
         ///   1. **Proof in instruction data, no context state:**
         ///      - No accounts are required.

@@ -1,10 +1,12 @@
-use crate::ContextStateInfo;
-use solana_account_view::AccountView;
-use solana_instruction_view::{
-    cpi::{invoke_signed, Signer},
-    InstructionAccount, InstructionView,
+use {
+    crate::ContextStateInfo,
+    solana_account_view::AccountView,
+    solana_instruction_view::{
+        cpi::{invoke_signed, Signer},
+        InstructionAccount, InstructionView,
+    },
+    solana_program_error::ProgramResult,
 };
-use solana_program_error::ProgramResult;
 
 /// Close a zero-knowledge proof context state.
 ///
