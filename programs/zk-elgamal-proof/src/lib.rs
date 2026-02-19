@@ -3,6 +3,9 @@
 pub mod instructions;
 
 use core::mem::MaybeUninit;
+use solana_account_view::AccountView;
+use solana_instruction_view::{cpi::invoke, InstructionAccount, InstructionView};
+use solana_program_error::ProgramResult;
 
 solana_address::declare_id!("ZkE1Gama1Proof11111111111111111111111111111");
 
@@ -47,7 +50,32 @@ fn write_bytes(destination: &mut [MaybeUninit<u8>], source: &[u8]) {
     }
 }
 
-macro_rules! build_instruction {
+/// A enum that represents a proof.
+///
+/// It can contain two types of proofs:
+///
+/// 1. A reference to an account that contains a proof.
+///    The `offset` field specifies where in the account the proof is located.
+/// 2. A proof stored in a byte array of size `PROOF_LEN`.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Proof<'a, const PROOF_LEN: usize> {
+    Account {
+        account: &'a AccountView,
+        offset: u32,
+    },
+    Data(&'a [u8; PROOF_LEN]),
+}
+
+/// A struct that holds references to the context state account and authority.
+///
+/// It is used to provide information about the context state when invoking an instruction.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ContextStateInfo<'a> {
+    pub context_state_account: &'a AccountView,
+    pub context_state_authority: &'a AccountView,
+}
+
+macro_rules! create_instruction_struct {
     (
         DOC_MAIN = $doc_main:literal,
         DOC_AUX = $doc_aux:literal,
@@ -55,173 +83,132 @@ macro_rules! build_instruction {
         DISCRIMINATOR = $discriminator:expr,
         PROOF_LEN = $proof_len:expr
     ) => {
-        paste::paste! {
-            #[doc = $doc_main]
-            /// Proof in instruction data, no context state.
-            ///
-            #[doc = $doc_aux]
-            ///
-            /// No accounts are required by this instruction.
-            pub struct [<$name Data>]<'a> {
-                /// Proof data.
-                pub proof_data: &'a [u8; $proof_len],
-            }
+        #[doc = $doc_main]
+        ///
+        #[doc = $doc_aux]
+        ///
+        /// Accounts expected by this instruction:
+        ///
+        ///   There are four ways to structure the accounts, depending on whether the
+        ///   proof is provided as instruction data or in a separate account, and whether
+        ///   a proof context is created.
+        ///
+        ///   1. **Proof in instruction data, no context state:**
+        ///      - No accounts are required.
+        ///
+        ///   2. **Proof in instruction data, with context state:**
+        ///      - `[writable]` The proof context account to create.
+        ///      - `[]` The proof context account owner.
+        ///
+        ///   3. **Proof in account, no context state:**
+        ///      - `[]` Account to read the proof from.
+        ///
+        ///   4. **Proof in account, with context state:**
+        ///      - `[]` Account to read the proof from.
+        ///      - `[writable]` The proof context account to create.
+        ///      - `[]` The proof context account owner.
+        pub struct $name<'a, 'b> {
+            /// Optional context state info.
+            pub context_state_info: Option<ContextStateInfo<'a>>,
+            /// Proof.
+            pub proof: Proof<'b, $proof_len>,
+        }
 
-            impl [<$name Data>]<'_> {
-                #[inline(always)]
-                pub fn invoke(&self) -> ProgramResult {
-                    // 1 byte (discriminator) + proof length bytes
-                    let mut instruction_data = [UNINIT_BYTE; 1 + $proof_len];
+        impl VerifyPubkeyValidity<'_, '_> {
+            #[inline(always)]
+            pub fn invoke(&self) -> ProgramResult {
+                match self.proof {
+                    Proof::Account {
+                        account: proof_account,
+                        offset,
+                    } => {
+                        // 1 byte (discriminator) + offset (4 bytes, u32)
+                        let mut instruction_data = [UNINIT_BYTE; 1 + 4];
+                        instruction_data[0].write($discriminator);
+                        write_bytes(&mut instruction_data[1..], &offset.to_le_bytes());
+                        let instruction_data =
+                            unsafe { from_raw_parts(instruction_data.as_ptr() as _, 1 + 4) };
 
-                    instruction_data[0].write($discriminator);
-                    write_bytes(&mut instruction_data[1..], self.proof_data);
+                        if let Some(ref context_state_info) = self.context_state_info {
+                            let instruction_accounts: [InstructionAccount; 3] = [
+                                InstructionAccount::readonly(proof_account.address()),
+                                InstructionAccount::writable(
+                                    context_state_info.context_state_account.address(),
+                                ),
+                                InstructionAccount::readonly(
+                                    context_state_info.context_state_authority.address(),
+                                ),
+                            ];
 
-                    let instruction = InstructionView {
-                        program_id: &$crate::ID,
-                        accounts: &[],
-                        data: unsafe { from_raw_parts(instruction_data.as_ptr() as _, 1 + $proof_len) },
-                    };
+                            build_and_invoke_instruction(
+                                &instruction_accounts,
+                                instruction_data,
+                                &[
+                                    proof_account,
+                                    context_state_info.context_state_account,
+                                    context_state_info.context_state_authority,
+                                ],
+                            )
+                        } else {
+                            let instruction_accounts: [InstructionAccount; 1] =
+                                [InstructionAccount::readonly(proof_account.address())];
 
-                    invoke(&instruction, &[])
-                }
-            }
+                            build_and_invoke_instruction(
+                                &instruction_accounts,
+                                instruction_data,
+                                &[proof_account],
+                            )
+                        }
+                    }
+                    Proof::Data(proof_data) => {
+                        // 1 byte (discriminator) + proof length bytes
+                        let mut instruction_data = [UNINIT_BYTE; 1 + $proof_len];
+                        instruction_data[0].write($discriminator);
+                        write_bytes(&mut instruction_data[1..], proof_data);
+                        let instruction_data = unsafe {
+                            from_raw_parts(instruction_data.as_ptr() as _, 1 + $proof_len)
+                        };
 
-            #[doc = $doc_main]
-            /// Proof in instruction data, with context state.
-            ///
-            #[doc = $doc_aux]
-            ///
-            /// Accounts expected by this instruction:
-            ///
-            ///   0. `[writable]` The proof context account to create.
-            ///   1. `[]` The proof context account owner.
-            pub struct [<$name DataWithContext>]<'a, 'b> {
-                /// Context state account.
-                pub context_state_account: &'a AccountView,
-                /// Context state authority account.
-                pub context_state_authority: &'a AccountView,
-                /// Proof data.
-                pub proof_data: &'b [u8; $proof_len],
-            }
+                        if let Some(ref context_state_info) = self.context_state_info {
+                            let instruction_accounts: [InstructionAccount; 2] = [
+                                InstructionAccount::writable(
+                                    context_state_info.context_state_account.address(),
+                                ),
+                                InstructionAccount::readonly(
+                                    context_state_info.context_state_authority.address(),
+                                ),
+                            ];
 
-            impl [<$name DataWithContext>]<'_,'_> {
-                #[inline(always)]
-                pub fn invoke(&self) -> ProgramResult {
-                    let instruction_accounts: [InstructionAccount; 2] = [
-                        InstructionAccount::writable(self.context_state_account.address()),
-                        InstructionAccount::readonly(self.context_state_authority.address()),
-                    ];
-
-                    // 1 byte (discriminator) + proof length bytes
-                    let mut instruction_data = [UNINIT_BYTE; 1 + $proof_len];
-
-                    instruction_data[0].write($discriminator);
-                    write_bytes(&mut instruction_data[1..], self.proof_data);
-
-                    let instruction = InstructionView {
-                        program_id: &$crate::ID,
-                        accounts: &instruction_accounts,
-                        data: unsafe { from_raw_parts(instruction_data.as_ptr() as _, 1 + $proof_len) },
-                    };
-
-                    invoke(
-                        &instruction,
-                        &[self.context_state_account, self.context_state_authority],
-                    )
-                }
-            }
-
-            #[doc = $doc_main]
-            /// Proof in account, no context state.
-            ///
-            #[doc = $doc_aux]
-            ///
-            /// Accounts expected by this instruction:
-            ///
-            ///   0. `[]` Account to read the proof from.
-            pub struct [<$name Account>]<'a> {
-                /// Account with the proof.
-                pub proof_account: &'a AccountView,
-                /// Offset of the proof in the proof account.
-                pub offset: u32,
-            }
-
-            impl [<$name Account>]<'_> {
-                #[inline(always)]
-                pub fn invoke(&self) -> ProgramResult {
-                    let instruction_accounts: [InstructionAccount; 1] =
-                        [InstructionAccount::readonly(self.proof_account.address())];
-
-                    // 1 byte (discriminator) + offset (4 bytes, u32)
-                    let mut instruction_data = [UNINIT_BYTE; 1 + 4];
-
-                    instruction_data[0].write($discriminator);
-                    write_bytes(&mut instruction_data[1..], &self.offset.to_le_bytes());
-
-                    let instruction = InstructionView {
-                        program_id: &$crate::ID,
-                        accounts: &instruction_accounts,
-                        data: unsafe { from_raw_parts(instruction_data.as_ptr() as _, 1 + 4) },
-                    };
-
-                    invoke(&instruction, &[self.proof_account])
-                }
-            }
-
-            #[doc = $doc_main]
-            /// Proof in account, with context state.
-            ///
-            #[doc = $doc_aux]
-            ///
-            /// Accounts expected by this instruction:
-            ///
-            ///   0. `[]` Account to read the proof from.
-            ///   1. `[writable]` The proof context account to create.
-            ///   2. `[]` The proof context account to create.
-            pub struct [<$name AccountWithContext>]<'a, 'b> {
-                /// Account with the proof
-                pub proof_account: &'a AccountView,
-                /// Context state account.
-                pub context_state_account: &'b AccountView,
-                /// Context state authority account.
-                pub context_state_authority: &'b AccountView,
-                /// Offset of the proof in the proof account.
-                pub offset: u32,
-            }
-
-            impl [<$name AccountWithContext>]<'_,'_> {
-                #[inline(always)]
-                pub fn invoke(&self) -> ProgramResult {
-                    let instruction_accounts: [InstructionAccount; 3] = [
-                        InstructionAccount::readonly(self.proof_account.address()),
-                        InstructionAccount::writable(self.context_state_account.address()),
-                        InstructionAccount::readonly(self.context_state_authority.address()),
-                    ];
-
-                    // 1 byte (discriminator) + offset (4 bytes, u32)
-                    let mut instruction_data = [UNINIT_BYTE; 1 + 4];
-
-                    instruction_data[0].write($discriminator);
-                    write_bytes(&mut instruction_data[1..], &self.offset.to_le_bytes());
-
-                    let instruction = InstructionView {
-                        program_id: &$crate::ID,
-                        accounts: &instruction_accounts,
-                        data: unsafe { from_raw_parts(instruction_data.as_ptr() as _, 1 + 4) },
-                    };
-
-                    invoke(
-                        &instruction,
-                        &[
-                            self.proof_account,
-                            self.context_state_account,
-                            self.context_state_authority,
-                        ],
-                    )
+                            build_and_invoke_instruction(
+                                &instruction_accounts,
+                                instruction_data,
+                                &[
+                                    context_state_info.context_state_account,
+                                    context_state_info.context_state_authority,
+                                ],
+                            )
+                        } else {
+                            build_and_invoke_instruction(&[], instruction_data, &[])
+                        }
+                    }
                 }
             }
         }
     };
 }
 
-use build_instruction;
+use create_instruction_struct;
+
+#[inline(always)]
+fn build_and_invoke_instruction<const ACCOUNTS: usize>(
+    accounts: &[InstructionAccount],
+    data: &[u8],
+    account_views: &[&AccountView; ACCOUNTS],
+) -> ProgramResult {
+    let instruction = InstructionView {
+        program_id: &crate::ID,
+        accounts,
+        data,
+    };
+    invoke(&instruction, account_views)
+}
