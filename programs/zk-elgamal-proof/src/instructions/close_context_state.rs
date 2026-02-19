@@ -26,6 +26,7 @@ impl CloseContextState<'_, '_> {
     pub fn invoke(&self) -> ProgramResult {
         self.invoke_signed(&[])
     }
+
     #[inline(always)]
     pub fn invoke_signed(&self, signers: &[Signer]) -> ProgramResult {
         let instruction_accounts: [InstructionAccount; 3] = [
