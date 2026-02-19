@@ -1,3 +1,4 @@
+use crate::ContextStateInfo;
 use solana_account_view::AccountView;
 use solana_instruction_view::{
     cpi::{invoke_signed, Signer},
@@ -13,10 +14,8 @@ use solana_program_error::ProgramResult;
 ///   1. `[writable]` The destination account for lamports
 ///   2. `[signer]` The context account's owner
 pub struct CloseContextState<'a, 'b> {
-    /// Context state account
-    pub context_state_account: &'a AccountView,
-    /// Context state authority account
-    pub context_state_authority: &'a AccountView,
+    /// Context state to close
+    pub context_state_info: ContextStateInfo<'a>,
     /// Destination account for lamports
     pub destination_account: &'b AccountView,
 }
@@ -30,9 +29,11 @@ impl CloseContextState<'_, '_> {
     #[inline(always)]
     pub fn invoke_signed(&self, signers: &[Signer]) -> ProgramResult {
         let instruction_accounts: [InstructionAccount; 3] = [
-            InstructionAccount::writable(self.context_state_account.address()),
+            InstructionAccount::writable(self.context_state_info.context_state_account.address()),
             InstructionAccount::writable(self.destination_account.address()),
-            InstructionAccount::readonly_signer(self.context_state_authority.address()),
+            InstructionAccount::readonly_signer(
+                self.context_state_info.context_state_authority.address(),
+            ),
         ];
 
         let instruction = InstructionView {
@@ -44,9 +45,9 @@ impl CloseContextState<'_, '_> {
         invoke_signed(
             &instruction,
             &[
-                self.context_state_account,
+                self.context_state_info.context_state_account,
                 self.destination_account,
-                self.context_state_authority,
+                self.context_state_info.context_state_authority,
             ],
             signers,
         )

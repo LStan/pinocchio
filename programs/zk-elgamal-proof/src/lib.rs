@@ -9,32 +9,41 @@ use solana_program_error::ProgramResult;
 
 solana_address::declare_id!("ZkE1Gama1Proof11111111111111111111111111111");
 
-// /// Byte length of a ciphertext-commitment equality proof
-// pub const CIPHERTEXT_COMMITMENT_EQUALITY_PROOF_LEN: usize = 192;
+/// Byte length of a zero-ciphertext proof with context
+pub const ZERO_CIPHERTEXT_PROOF_FULL_LEN: usize = 96 + 96; // 96 for context + 96 for proof
 
-// /// Byte length of a ciphertext-ciphertext equality proof
-// pub const CIPHERTEXT_CIPHERTEXT_EQUALITY_PROOF_LEN: usize = 224;
+/// Byte length of a ciphertext-ciphertext equality proof with context
+pub const CIPHERTEXT_CIPHERTEXT_EQUALITY_PROOF_FULL_LEN: usize = 192 + 224; // 192 for context + 224 for proof
 
-// /// Byte length of a grouped ciphertext for 2 handles validity proof
-// pub const GROUPED_CIPHERTEXT_2_HANDLES_VALIDITY_PROOF_LEN: usize = 160;
-
-// /// Byte length of a grouped ciphertext for 3 handles validity proof
-// pub const GROUPED_CIPHERTEXT_3_HANDLES_VALIDITY_PROOF_LEN: usize = 192;
-
-// /// Byte length of a batched grouped ciphertext for 2 handles validity proof
-// pub const BATCHED_GROUPED_CIPHERTEXT_2_HANDLES_VALIDITY_PROOF_LEN: usize = 160;
-
-// /// Byte length of a batched grouped ciphertext for 3 handles validity proof
-// pub const BATCHED_GROUPED_CIPHERTEXT_3_HANDLES_VALIDITY_PROOF_LEN: usize = 192;
-
-// /// Byte length of a zero-ciphertext proof
-// pub const ZERO_CIPHERTEXT_PROOF_LEN: usize = 96;
-
-// /// Byte length of a percentage with cap proof
-// pub const PERCENTAGE_WITH_CAP_PROOF_LEN: usize = 256;
+/// Byte length of a ciphertext-commitment equality proof with context
+pub const CIPHERTEXT_COMMITMENT_EQUALITY_PROOF_FULL_LEN: usize = 128 + 192; // 128 for context + 192 for proof
 
 /// Byte length of a public key validity proof with context
 pub const PUBKEY_VALIDITY_PROOF_FULL_LEN: usize = 32 + 64; // 32 for context + 64 for proof
+
+/// Byte length of a percentage with cap proof with context
+pub const PERCENTAGE_WITH_CAP_PROOF_FULL_LEN: usize = 104 + 256; // 104 for context + 256 for proof
+
+/// Byte length of a range proof for an unsigned 64-bit number with context
+pub const RANGE_PROOF_U64_FULL_LEN: usize = 264 + 672; // 264 for context + 672 for proof
+
+/// Byte length of a range proof for an unsigned 128-bit number with context
+pub const RANGE_PROOF_U128_FULL_LEN: usize = 264 + 736; // 264 for context + 736 for proof
+
+/// Byte length of a range proof for an unsigned 256-bit number with context
+pub const RANGE_PROOF_U256_FULL_LEN: usize = 264 + 800; // 264 for context + 800 for proof
+
+/// Byte length of a grouped ciphertext for 2 handles validity proof with context
+pub const GROUPED_CIPHERTEXT_2_HANDLES_VALIDITY_PROOF_FULL_LEN: usize = 160 + 160; // 160 for context + 160 for proof
+
+/// Byte length of a grouped ciphertext for 3 handles validity proof with context
+pub const GROUPED_CIPHERTEXT_3_HANDLES_VALIDITY_PROOF_FULL_LEN: usize = 224 + 192; // 224 for context + 192 for proof
+
+/// Byte length of a batched grouped ciphertext for 2 handles validity proof with context
+pub const BATCHED_GROUPED_CIPHERTEXT_2_HANDLES_VALIDITY_PROOF_FULL_LEN: usize = 256 + 160; // 256 for context + 160 for proof
+
+/// Byte length of a batched grouped ciphertext for 3 handles validity proof with context
+pub const BATCHED_GROUPED_CIPHERTEXT_3_HANDLES_VALIDITY_PROOF_FULL_LEN: usize = 352 + 192; // 352 for context + 192 for proof
 
 const UNINIT_BYTE: MaybeUninit<u8> = MaybeUninit::<u8>::uninit();
 
@@ -50,7 +59,7 @@ fn write_bytes(destination: &mut [MaybeUninit<u8>], source: &[u8]) {
     }
 }
 
-/// A enum that represents a proof.
+/// An enum that represents a proof.
 ///
 /// It can contain two types of proofs:
 ///
@@ -114,7 +123,7 @@ macro_rules! create_instruction_struct {
             pub proof: Proof<'b, $proof_len>,
         }
 
-        impl VerifyPubkeyValidity<'_, '_> {
+        impl $name<'_, '_> {
             #[inline(always)]
             pub fn invoke(&self) -> ProgramResult {
                 match self.proof {
