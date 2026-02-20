@@ -140,8 +140,10 @@ macro_rules! create_instruction_struct {
                     } => {
                         // 1 byte (discriminator) + offset (4 bytes, u32)
                         let mut instruction_data = [UNINIT_BYTE; 1 + 4];
+
                         instruction_data[0].write($discriminator);
                         write_bytes(&mut instruction_data[1..], &offset.to_le_bytes());
+
                         let instruction_data =
                             unsafe { from_raw_parts(instruction_data.as_ptr() as _, 1 + 4) };
 
@@ -179,8 +181,10 @@ macro_rules! create_instruction_struct {
                     Proof::Data(proof_data) => {
                         // 1 byte (discriminator) + proof length bytes
                         let mut instruction_data = [UNINIT_BYTE; 1 + $proof_len];
+
                         instruction_data[0].write($discriminator);
                         write_bytes(&mut instruction_data[1..], proof_data);
+
                         let instruction_data = unsafe {
                             from_raw_parts(instruction_data.as_ptr() as _, 1 + $proof_len)
                         };
