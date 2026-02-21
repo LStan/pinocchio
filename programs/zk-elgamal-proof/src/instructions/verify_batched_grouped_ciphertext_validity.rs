@@ -1,12 +1,6 @@
-use {
-    crate::{
-        build_and_invoke_instruction, create_instruction_struct, write_bytes, ContextStateInfo,
-        Proof, BATCHED_GROUPED_CIPHERTEXT_2_HANDLES_VALIDITY_PROOF_FULL_LEN,
-        BATCHED_GROUPED_CIPHERTEXT_3_HANDLES_VALIDITY_PROOF_FULL_LEN, UNINIT_BYTE,
-    },
-    core::slice::from_raw_parts,
-    solana_instruction_view::InstructionAccount,
-    solana_program_error::ProgramResult,
+use crate::{
+    create_instruction_struct, BATCHED_GROUPED_CIPHERTEXT_2_HANDLES_VALIDITY_PROOF_FULL_LEN,
+    BATCHED_GROUPED_CIPHERTEXT_3_HANDLES_VALIDITY_PROOF_FULL_LEN,
 };
 
 create_instruction_struct!(

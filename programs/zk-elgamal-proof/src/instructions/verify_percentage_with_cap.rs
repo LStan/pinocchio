@@ -1,12 +1,4 @@
-use {
-    crate::{
-        build_and_invoke_instruction, create_instruction_struct, write_bytes, ContextStateInfo,
-        Proof, PERCENTAGE_WITH_CAP_PROOF_FULL_LEN, UNINIT_BYTE,
-    },
-    core::slice::from_raw_parts,
-    solana_instruction_view::InstructionAccount,
-    solana_program_error::ProgramResult,
-};
+use crate::{create_instruction_struct, PERCENTAGE_WITH_CAP_PROOF_FULL_LEN};
 
 create_instruction_struct!(
     DOC_MAIN = "Verify a percentage-with-cap proof.",

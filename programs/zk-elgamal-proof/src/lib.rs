@@ -125,40 +125,40 @@ macro_rules! create_instruction_struct {
         ///      - `[]` The proof context account owner.
         pub struct $name<'a, 'b> {
             /// Optional context state info.
-            pub context_state_info: Option<ContextStateInfo<'a>>,
+            pub context_state_info: Option<$crate::ContextStateInfo<'a>>,
             /// Proof.
-            pub proof: Proof<'b, $proof_len>,
+            pub proof: $crate::Proof<'b, $proof_len>,
         }
 
         impl $name<'_, '_> {
             #[inline(always)]
-            pub fn invoke(&self) -> ProgramResult {
+            pub fn invoke(&self) -> ::solana_program_error::ProgramResult {
                 match self.proof {
-                    Proof::Account {
+                    $crate::Proof::Account {
                         account: proof_account,
                         offset,
                     } => {
                         // 1 byte (discriminator) + offset (4 bytes, u32)
-                        let mut instruction_data = [UNINIT_BYTE; 1 + 4];
+                        let mut instruction_data = [$crate::UNINIT_BYTE; 1 + 4];
 
                         instruction_data[0].write($discriminator);
-                        write_bytes(&mut instruction_data[1..], &offset.to_le_bytes());
+                        $crate::write_bytes(&mut instruction_data[1..], &offset.to_le_bytes());
 
                         let instruction_data =
-                            unsafe { from_raw_parts(instruction_data.as_ptr() as _, 1 + 4) };
+                            unsafe { ::core::slice::from_raw_parts(instruction_data.as_ptr() as _, 1 + 4) };
 
                         if let Some(ref context_state_info) = self.context_state_info {
-                            let instruction_accounts: [InstructionAccount; 3] = [
-                                InstructionAccount::readonly(proof_account.address()),
-                                InstructionAccount::writable(
+                            let instruction_accounts: [::solana_instruction_view::InstructionAccount; 3] = [
+                                ::solana_instruction_view::InstructionAccount::readonly(proof_account.address()),
+                                ::solana_instruction_view::InstructionAccount::writable(
                                     context_state_info.context_state_account.address(),
                                 ),
-                                InstructionAccount::readonly(
+                                ::solana_instruction_view::InstructionAccount::readonly(
                                     context_state_info.context_state_authority.address(),
                                 ),
                             ];
 
-                            build_and_invoke_instruction(
+                            $crate::build_and_invoke_instruction(
                                 &instruction_accounts,
                                 instruction_data,
                                 &[
@@ -168,38 +168,38 @@ macro_rules! create_instruction_struct {
                                 ],
                             )
                         } else {
-                            let instruction_accounts: [InstructionAccount; 1] =
-                                [InstructionAccount::readonly(proof_account.address())];
+                            let instruction_accounts: [::solana_instruction_view::InstructionAccount; 1] =
+                                [::solana_instruction_view::InstructionAccount::readonly(proof_account.address())];
 
-                            build_and_invoke_instruction(
+                            $crate::build_and_invoke_instruction(
                                 &instruction_accounts,
                                 instruction_data,
                                 &[proof_account],
                             )
                         }
                     }
-                    Proof::Data(proof_data) => {
+                    $crate::Proof::Data(proof_data) => {
                         // 1 byte (discriminator) + proof length bytes
-                        let mut instruction_data = [UNINIT_BYTE; 1 + $proof_len];
+                        let mut instruction_data = [$crate::UNINIT_BYTE; 1 + $proof_len];
 
                         instruction_data[0].write($discriminator);
-                        write_bytes(&mut instruction_data[1..], proof_data);
+                        $crate::write_bytes(&mut instruction_data[1..], proof_data);
 
                         let instruction_data = unsafe {
-                            from_raw_parts(instruction_data.as_ptr() as _, 1 + $proof_len)
+                            ::core::slice::from_raw_parts(instruction_data.as_ptr() as _, 1 + $proof_len)
                         };
 
                         if let Some(ref context_state_info) = self.context_state_info {
-                            let instruction_accounts: [InstructionAccount; 2] = [
-                                InstructionAccount::writable(
+                            let instruction_accounts: [::solana_instruction_view::InstructionAccount; 2] = [
+                                ::solana_instruction_view::InstructionAccount::writable(
                                     context_state_info.context_state_account.address(),
                                 ),
-                                InstructionAccount::readonly(
+                                ::solana_instruction_view::InstructionAccount::readonly(
                                     context_state_info.context_state_authority.address(),
                                 ),
                             ];
 
-                            build_and_invoke_instruction(
+                            $crate::build_and_invoke_instruction(
                                 &instruction_accounts,
                                 instruction_data,
                                 &[
@@ -208,7 +208,7 @@ macro_rules! create_instruction_struct {
                                 ],
                             )
                         } else {
-                            build_and_invoke_instruction(&[], instruction_data, &[])
+                            $crate::build_and_invoke_instruction(&[], instruction_data, &[])
                         }
                     }
                 }
