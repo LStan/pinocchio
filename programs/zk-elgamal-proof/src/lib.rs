@@ -138,7 +138,9 @@ macro_rules! create_instruction_struct {
                         account: proof_account,
                         offset,
                     } => {
-                        // 1 byte (discriminator) + offset (4 bytes, u32)
+                        // Instruction data layout:
+                        // - [0]: instruction discriminator (1 byte, u8)
+                        // - [1..5]: offset (4 bytes, u32)
                         let mut instruction_data = [$crate::UNINIT_BYTE; 1 + 4];
 
                         instruction_data[0].write($discriminator);
@@ -179,7 +181,9 @@ macro_rules! create_instruction_struct {
                         }
                     }
                     $crate::Proof::Data(proof_data) => {
-                        // 1 byte (discriminator) + proof length bytes
+                        // Instruction data layout:
+                        // - [0]: instruction discriminator (1 byte, u8)
+                        // - [1..=$proof_len]: proof
                         let mut instruction_data = [$crate::UNINIT_BYTE; 1 + $proof_len];
 
                         instruction_data[0].write($discriminator);
